@@ -28,12 +28,15 @@
 #include "ip_common.h"
 #include "tunnel.h"
 
+#define ETH_P_ETH	0x6558	/* Ethernet in Ethernet */
+
+
 static void usage(void) __attribute__((noreturn));
 
 static void usage(void)
 {
 	fprintf(stderr, "Usage: ip tunnel { add | change | del | show | prl | 6rd } [ NAME ]\n");
-	fprintf(stderr, "          [ mode { ipip | gre | sit | isatap } ] [ remote ADDR ] [ local ADDR ]\n");
+	fprintf(stderr, "          [ mode { ipip | gre [ type { ip | eth } ] | sit | isatap } ] [ remote ADDR ] [ local ADDR ]\n");
 	fprintf(stderr, "          [ [i|o]seq ] [ [i|o]key KEY ] [ [i|o]csum ]\n");
 	fprintf(stderr, "          [ prl-default ADDR ] [ prl-nodefault ADDR ] [ prl-delete ADDR ]\n");
 	fprintf(stderr, "          [ 6rd-prefix ADDR ] [ 6rd-relay_prefix ADDR ] [ 6rd-reset ]\n");
@@ -80,6 +83,20 @@ static int parse_args(int argc, char **argv, int cmd, struct ip_tunnel_parm *p)
 					exit(-1);
 				}
 				p->iph.protocol = IPPROTO_GRE;
+                NEXT_ARG();
+                if (strcmp(*argv,"type") == 0)
+                {
+                    NEXT_ARG();
+                    printf("90 route %s\n", *argv);
+                    if (strcmp(*argv,"eth") == 0)
+                    {
+                    p->proto_type = ETH_P_ETH;
+                    }
+                    else
+                    {
+                    p->proto_type = ETH_P_IP;
+                    }
+                }
 			} else if (strcmp(*argv, "sit") == 0 ||
 				   strcmp(*argv, "ipv6/ip") == 0) {
 				if (p->iph.protocol && p->iph.protocol != IPPROTO_IPV6) {
@@ -312,6 +329,13 @@ static void print_tunnel(struct ip_tunnel_parm *p)
 	/* Do not use format_host() for local addr,
 	 * symbolic name will not be useful.
 	 */
+     if(p->proto_type == ETH_P_ETH)
+                  printf("%s: %s/eth  remote %s  local %s ",
+                          p->name,
+                          tnl_strproto(p->iph.protocol),
+                          p->iph.daddr ? format_host(AF_INET, 4, &p->iph.daddr, s1, sizeof(s1))  : "any",
+                          p->iph.saddr ? rt_addr_n2a(AF_INET, 4, &p->iph.saddr, s2, sizeof(s2)) : "any");
+     else
 	printf("%s: %s/ip  remote %s  local %s ",
 	       p->name,
 	       tnl_strproto(p->iph.protocol),

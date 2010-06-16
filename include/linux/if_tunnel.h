@@ -34,6 +34,7 @@ struct ip_tunnel_parm {
 	__be16			o_flags;
 	__be32			i_key;
 	__be32			o_key;
+	__be16                  proto_type;    /* Added for EGRE */
 	struct iphdr		iph;
 };
 
